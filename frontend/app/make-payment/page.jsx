@@ -119,7 +119,7 @@ function MakePaymentPage() {
       <div className="absolute top-0 my-4 right-0 mx-6">
         <label className="flex cursor-pointer gap-2">
           <span className="label-text">
-            <Moon />
+            <Sun />
           </span>
           <input
             type="checkbox"
@@ -127,7 +127,7 @@ function MakePaymentPage() {
             className="toggle theme-controller"
           />
           <span className="label-text">
-            <Sun />
+            <Moon />
           </span>
         </label>
       </div>

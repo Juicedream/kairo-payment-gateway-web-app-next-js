@@ -1,28 +1,23 @@
 {
   "name": "kairo-payment-gateway",
-  "version": "0.1.0",
-  "private": true,
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
+  "version": "1.0.0",
+  "description": "A Payment gateway that works",
+  "homepage": "https://github.com/Juicedream/kairo-payment-gateway-web-app-next-js#readme",
+  "bugs": {
+    "url": "https://github.com/Juicedream/kairo-payment-gateway-web-app-next-js/issues"
   },
-  "dependencies": {
-    "daisyui": "^5.5.14",
-    "lucide-react": "^0.563.0",
-    "next": "16.1.6",
-    "react": "19.2.3",
-    "react-dom": "19.2.3"
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Juicedream/kairo-payment-gateway-web-app-next-js.git"
+  },
+  "license": "ISC",
+  "author": "Jude Nwadiogor",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "dev": "concurrently \"npm run dev --prefix frontend\""
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4.1.18",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "16.1.6",
-    "tailwindcss": "^4.1.18",
-    "typescript": "^5"
+    "concurrently": "^9.2.1"
   }
 }
