@@ -20,7 +20,7 @@ export default function RootLayout({
   children,
 }) {
   return (
-    <html lang="en" data-theme="=aqua">
+    <html lang="en" data-theme="aqua">
       <body
         className={`${poppins.className} ${inter.className} antialiased`}
       >
