@@ -54,6 +54,9 @@ function MakePaymentPage() {
       )}
       <Suspense fallback={"loading...."}>
         <div className="p-4 rounded-box w-130 h-130 glass flex flex-col items-center animate-fade-in z-9999 md:mx-4">
+          {/* <div className="bg-accent text-accent-content w-18 h-8 text-center absolute left-0 -skew-y-30 rounded-full">
+            <p className="text-md">Demo</p>
+          </div> */}
           {/* close icon */}
           <div
             className="w-full flex justify-end hover:cursor-pointer"
