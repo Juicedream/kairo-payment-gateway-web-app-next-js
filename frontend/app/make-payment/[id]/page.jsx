@@ -1,14 +1,17 @@
 "use client";
 import { X } from "lucide-react";
 import { Suspense, useState } from "react";
-import DarkNightToggler from "../../components/DarkNightToggler";
-import MakePaymentHeader from "../../components/make-payment/MakePaymentHeader";
-import CardForm from "../../components/make-payment/CardForm";
-import Loader from "../../components/Loader";
-import ToastAlert from "../../components/ToastAlert";
-import Success from "../../components/Success";
+import DarkNightToggler from "../../../components/DarkNightToggler";
+import MakePaymentHeader from "../../../components/make-payment/MakePaymentHeader";
+import CardForm from "../../../components/make-payment/CardForm";
+import Loader from "../../../components/Loader";
+import ToastAlert from "../../../components/ToastAlert";
+import Success from "../../../components/Success";
+import { useParams } from "next/navigation"
 
 function MakePaymentPage() {
+  const {id} = useParams();
+  console.log(id);
   const [loading, setLoading] = useState(false);
   const [showCardAlertError, setShowCardAlertError] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
