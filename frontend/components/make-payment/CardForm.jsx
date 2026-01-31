@@ -155,11 +155,11 @@ function CardForm({ setLoading, setError, setSuccess, setErrorMessage }) {
             className="text-primary-content"
           />
           {cardType === "visa" && (
-            <Image src={"./visa.svg"} width={30} height={30} alt="visa logo" />
+            <Image src={"../visa.svg"} width={30} height={30} alt="visa logo" />
           )}
           {cardType === "mastercard" && (
             <Image
-              src={"./mastercard.svg"}
+              src={"../mastercard.svg"}
               width={30}
               height={30}
               alt="mastercard logo"
