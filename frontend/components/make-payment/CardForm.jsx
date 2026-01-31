@@ -2,7 +2,7 @@ import { Calendar, CreditCard, Lock, RefreshCcw, User } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 
-function CardForm({ setLoading, setError, setSuccess, setErrorMessage }) {
+function CardForm({ setLoading, setError, setSuccess, setErrorMessage, amount }) {
   const [fullName, setFullName] = useState("");
   const [cardNumber, setCardNumber] = useState("");
   const [cardType, setCardType] = useState("");
@@ -226,8 +226,8 @@ function CardForm({ setLoading, setError, setSuccess, setErrorMessage }) {
         className="btn btn-primary px-12 py-6 rounded-full"
       >
         {/* <span className="loading loading-spinner"></span> */}
-        Pay ₦15,261.90
-      </button>
+        Pay ₦ {Number(amount).toLocaleString() || "15,261.90"
+}      </button>
     </>
   );
 }

@@ -1,18 +1,20 @@
 "use client";
-import { X } from "lucide-react";
-import { Suspense, useState } from "react";
+import { LoaderPinwheel, X } from "lucide-react";
+import { Suspense, useEffect, useState } from "react";
 import DarkNightToggler from "../../../components/DarkNightToggler";
 import MakePaymentHeader from "../../../components/make-payment/MakePaymentHeader";
 import CardForm from "../../../components/make-payment/CardForm";
 import Loader from "../../../components/Loader";
 import ToastAlert from "../../../components/ToastAlert";
 import Success from "../../../components/Success";
-import { useParams } from "next/navigation"
+import { useParams } from "next/navigation";
 
 function MakePaymentPage() {
-  const {id} = useParams();
+  const { id } = useParams();
   console.log(id);
+  const [paymentInfo, setPaymentInfo] = useState({});
   const [loading, setLoading] = useState(false);
+  const [isPageLoading, setIsPageLoading] = useState(true);
   const [showCardAlertError, setShowCardAlertError] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [success, setSuccess] = useState(false);
@@ -39,6 +41,29 @@ function MakePaymentPage() {
       }
     });
   };
+  const getPaymentInfo = async (payId) => {
+    try {
+      const res = await fetch(
+        "http://localhost:5000/api/v1/payments/info/" + payId,
+      );
+      const data = await res.json();
+      return data?.info;
+    } catch (error) {
+      console.error(error);
+    }
+  };
+  useEffect(() => {
+    async function setPaymentPage() {
+      const response = await getPaymentInfo(id);
+      if (!response) {
+        alert("Invalid or Expired Payment");
+        return;
+      }
+      setPaymentInfo(response);
+      setIsPageLoading(false);
+    }
+    setPaymentPage();
+  }, []);
   // console.log(errorMessage);
   // console.log(showCardAlertError);
   return (
@@ -49,84 +74,88 @@ function MakePaymentPage() {
       {/*Toast Alert  */}
       {showCardAlertError && (
         <div className="absolute top-4">
-          <ToastAlert
-            type="error"
-            message={errorMessage}
-          />
+          <ToastAlert type="error" message={errorMessage} />
         </div>
       )}
-      <Suspense fallback={"loading...."}>
-        <div className="p-4 rounded-box w-130 h-130 glass flex flex-col items-center animate-fade-in z-9999 md:mx-4">
-          {/* close icon */}
-          <div
-            className="w-full flex justify-end hover:cursor-pointer"
-            onClick={() => window.history.back()}
-          >
-            <X size={25} />
-          </div>
-
-          {success ? (
-            <div
-              key="card"
-              className="mt-4 w-80 h-100 bg-white rounded-md border-2 border-slate-200 flex flex-col items-center"
-            >
-              <Success />
-            </div>
-          ) : (
-            <>
-              {/* header */}
-              <MakePaymentHeader
-                label="💳 Kairo"
-                desc="Choose a payment option"
-              />
-              {/* options */}
-              <div className="w-80 rounded-full bg-gray-400/50 h-10 py-1 mt-4 flex flex-row justify-between px-1">
-                {options.map((option, index) => (
-                  <button
-                    key={index}
-                    type="button"
-                    onClick={() => handleClickedOption(option.name)}
-                    className={`flex items-center px-3 hover:cursor-pointer font-light ${option.clicked ? "bg-white rounded-full  shadow-black shadow-sm text-primary-content" : "text-slate-600"}`}
-                  >
-                    {option.name}
-                  </button>
-                ))}
-              </div>
-              {/* Card */}
-              {options.map((option) => {
-                if (option.name === "Card" && option.clicked === true) {
-                  return (
-                    <div
-                      key="card"
-                      className="mt-4 w-80 h-70 bg-white rounded-md border-2 border-slate-200 flex flex-col items-center"
-                    >
-                      {/* card holder name */}
-                      {!loading ? (
-                        <>
-                          <CardForm
-                            setLoading={setLoading}
-                            setError={setShowCardAlertError}
-                            setSuccess={setSuccess}
-                            setErrorMessage={setErrorMessage}
-                          />
-                        </>
-                      ) : (
-                        <>
-                          <Loader />
-                        </>
-                      )}
-                    </div>
-                  );
-                }
-              })}
-            </>
-          )}
-
-          <p className="absolute bottom-0 mb-4 text-xs">
-            Powered by <b>Kairo</b> Payment Gateway Team
-          </p>
+      {isPageLoading ? (
+        <div className="w-50 h-50 bg-white z-999 rounded-box flex justify-center items-center">
+          <LoaderPinwheel className="animate-spin" size={52} />
         </div>
-      </Suspense>
+      ) : (
+        <Suspense fallback={"loading...."}>
+          <div className="p-4 rounded-box w-130 h-130 glass flex flex-col items-center animate-fade-in z-9999 md:mx-4">
+            {/* close icon */}
+            <div
+              className="w-full flex justify-end hover:cursor-pointer"
+              onClick={() => window.history.back()}
+            >
+              <X size={25} />
+            </div>
+
+            {success ? (
+              <div
+                key="card"
+                className="mt-4 w-80 h-100 bg-white rounded-md border-2 border-slate-200 flex flex-col items-center"
+              >
+                <Success />
+              </div>
+            ) : (
+              <>
+                {/* header */}
+                <MakePaymentHeader
+                  label="💳 Kairo"
+                  desc="Choose a payment option"
+                />
+                {/* options */}
+                <div className="w-80 rounded-full bg-gray-400/50 h-10 py-1 mt-4 flex flex-row justify-between px-1">
+                  {options.map((option, index) => (
+                    <button
+                      key={index}
+                      type="button"
+                      onClick={() => handleClickedOption(option.name)}
+                      className={`flex items-center px-3 hover:cursor-pointer font-light ${option.clicked ? "bg-white rounded-full  shadow-black shadow-sm text-primary-content" : "text-slate-600"}`}
+                    >
+                      {option.name}
+                    </button>
+                  ))}
+                </div>
+                {/* Card */}
+                {options.map((option) => {
+                  if (option.name === "Card" && option.clicked === true) {
+                    return (
+                      <div
+                        key="card"
+                        className="mt-4 w-80 h-70 bg-white rounded-md border-2 border-slate-200 flex flex-col items-center"
+                      >
+                        {/* card holder name */}
+                        {!loading ? (
+                          <>
+                            <CardForm
+                              setLoading={setLoading}
+                              setError={setShowCardAlertError}
+                              setSuccess={setSuccess}
+                              setErrorMessage={setErrorMessage}
+                              amount={paymentInfo?.amount}
+                            />
+                          </>
+                        ) : (
+                          <>
+                            <Loader />
+                          </>
+                        )}
+                      </div>
+                    );
+                  }
+                })}
+              </>
+            )}
+
+            <p className="absolute bottom-0 mb-4 text-xs">
+              Powered by <b>Kairo</b> Payment Gateway Team
+            </p>
+          </div>
+        </Suspense>
+      )}
     </div>
   );
 }

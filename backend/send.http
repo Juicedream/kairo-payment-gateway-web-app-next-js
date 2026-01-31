@@ -1,0 +1,1 @@
+GET http://localhost:5000/api/v1/payments/info/070625bb-994c-4620-a375-cf872bbab5bd
