@@ -5,11 +5,18 @@ import { useState } from "react";
 import { deletePaymentByPayID, getAllPayments } from "../../lib/payments";
 import { toast } from "react-toastify";
 
+import DeletePaymentModal from "./DeletePaymentModal";
+
 export default function PaymentsTable({ payments, setPayments }) {
   const [currentPayment, setCurrentPayment] = useState(null);
   function handleViewDetails(payment) {
     setCurrentPayment(payment);
     document.getElementById("my_modal_4").showModal();
+  }
+
+  function showDeleteConfirmation(payment) {
+    setCurrentPayment(payment);
+    document.getElementById('my_modal_5').showModal()
   }
 
   async function handleDeletePayment(payId) {
@@ -26,6 +33,7 @@ export default function PaymentsTable({ payments, setPayments }) {
     } finally {
       const updatedPayments = await getAllPayments();
       setPayments(updatedPayments?.payments || []);
+      document.getElementById('my_modal_5').close();
     }
   }
   return (
@@ -81,13 +89,18 @@ export default function PaymentsTable({ payments, setPayments }) {
               Details
             </button>
             <button className="btn btn-accent btn-xs">Make Payment</button>
+            <PaymentDetails payment={currentPayment} />
             <button
               className="btn btn-error btn-xs"
-              onClick={() => handleDeletePayment(payment?.paymentId)}
+              onClick={() => showDeleteConfirmation(payment)}
             >
               Delete
             </button>
-            <PaymentDetails payment={currentPayment} />
+
+            <DeletePaymentModal 
+              onDelete={handleDeletePayment}
+              payment={currentPayment}
+            />
           </td>
         </tr>
       ))}
