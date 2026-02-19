@@ -7,11 +7,12 @@ import CardForm from "../../../components/make-payment/CardForm";
 import Loader from "../../../components/Loader";
 import ToastAlert from "../../../components/ToastAlert";
 import Success from "../../../components/Success";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 
 function MakePaymentPage() {
   const { id } = useParams();
-  console.log(id);
+  const router = useRouter();
+
   const [paymentInfo, setPaymentInfo] = useState({});
   const [loading, setLoading] = useState(false);
   const [isPageLoading, setIsPageLoading] = useState(true);
@@ -47,6 +48,9 @@ function MakePaymentPage() {
         "http://localhost:5000/api/v1/payments/info/" + payId,
       );
       const data = await res.json();
+      if (data?.status !== "pending") {
+       return data 
+      }
       return data?.info;
     } catch (error) {
       console.error(error);
@@ -55,15 +59,17 @@ function MakePaymentPage() {
   useEffect(() => {
     async function setPaymentPage() {
       const response = await getPaymentInfo(id);
-      if (!response) {
+      if (!response || response?.info.status !== "pending") {
         alert("Invalid or Expired Payment");
+        router.push("/");
         return;
       }
-      setPaymentInfo(response);
+      setPaymentInfo(response?.info);
       setIsPageLoading(false);
     }
     setPaymentPage();
   }, []);
+ 
   // console.log(errorMessage);
   // console.log(showCardAlertError);
   return (
@@ -136,6 +142,7 @@ function MakePaymentPage() {
                               setSuccess={setSuccess}
                               setErrorMessage={setErrorMessage}
                               amount={paymentInfo?.amount}
+                              id={id}
                             />
                           </>
                         ) : (

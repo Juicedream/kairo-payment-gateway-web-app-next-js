@@ -1,13 +1,16 @@
 import { Calendar, CreditCard, Lock, RefreshCcw, User } from "lucide-react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-function CardForm({ setLoading, setError, setSuccess, setErrorMessage, amount }) {
+function CardForm({ setLoading, setError, setSuccess, setErrorMessage, amount, id }) {
   const [fullName, setFullName] = useState("");
   const [cardNumber, setCardNumber] = useState("");
   const [cardType, setCardType] = useState("");
   const [expDate, setExpDate] = useState("");
+  const paymentID = id || 0;
   const [cvv, setCvv] = useState("");
+  const router = useRouter();
   const [data, setData] = useState({
     cardNumber,
     cvv,
@@ -103,21 +106,46 @@ function CardForm({ setLoading, setError, setSuccess, setErrorMessage, amount })
         setTimeout(() => setError(false), 3000);
         return;
       }
+      async function payWithCard() {
+        setLoading(true);
+        console.log({
+            cardNumber: cardNumber.split(" ").join(""), 
+            expiryDate: expDate, 
+            cvv, 
+            paymentID, 
+            amount
+          })
+        const response = await fetch("http://localhost:5000/api/v1/payments/pay-with-card", {
+          method: "post",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            cardNumber: cardNumber.split(" ").join(""), 
+            expiryDate: expDate, 
+            cvv, 
+            paymentID,
+            amount
+          })
+        });
+        const data = await response.json();
+        if (data?.error) {
+          setErrorMessage("Payment failed, " + data?.error || "try another card");
+          setTimeout(() => setError(true), 3000);
+          return;
+        }
 
-      setLoading(true);
-      const random = Math.floor(Math.random() * 2);
-      if (random === 1) {
-        setTimeout(() => setSuccess(true), 3000);
-        return;
+        setSuccess(true);
+        setTimeout(() => router.push("/"), 6000);   
       }
-      if (random === 0) {
-        setErrorMessage("Payment failed, try another card");
-        setTimeout(() => setError(true), 3000);
-      }
+      payWithCard()
     } catch (error) {
       console.log(error);
+      setErrorMessage(error.message);
+      setTimeout(() => setError(true), 3000);
     } finally {
       setTimeout(() => setLoading(false), 3000);
+      setTimeout(() => setError(false), 5000);
     }
   };
   return (

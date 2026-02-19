@@ -34,5 +34,5 @@ app.get("/health", (_, res) => {
 // Start app
 dbConnection();
 app.listen(port, () => {
-    console.log(`Server started on port: http://localhost:${port}`)
+    console.log(`Server started on port: http://localhost:${port}`);
 })
