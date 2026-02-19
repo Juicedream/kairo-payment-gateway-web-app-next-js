@@ -189,10 +189,39 @@ const getAllTransactions = async(_, res) => {
     return res.status(500).json(internalServerError);
   }
 }
+const deletePaymentByPayID = async (req, res) => {
+  const { payId } = req.params;
+  try {
+    if (!payId) {
+      return res.status(400).json({
+        code: 400,
+        status: "failed",
+        error: "Pay Id is required"
+      });
+    }
+    const deletedPayment = await PaymentModel.findOneAndDelete({ paymentId: payId });
+    if (!deletedPayment) {
+      return res.status(404).json({
+        code: 404,
+        status: "failed",
+        error: "Payment Id is invalid"
+      });
+    }
+    return res.status(200).json({
+      code: 200,
+      status: "success",
+      message: "Payment deleted successfully"
+    });
+  } catch (error) {
+    console.error("Error occurred in deletePaymentByPayID controller ", error);
+    return res.status(500).json(internalServerError);
+  }
+}
 module.exports = {
   initiatePayment,
   getPaymentInfoByPayID,
   payWithCard,
   getVirtualAccount,
-  getAllTransactions
+  getAllTransactions,
+  deletePaymentByPayID
 };

@@ -1,4 +1,7 @@
-export default function PaymentsHeader() {
+"use client";
+import { InitiatePaymentModal } from "./InitiatePaymentModal";
+
+export default function PaymentsHeader({setPayments}) {
   return (
     <div className="flex items-center justify-between">
       <div>
@@ -7,7 +10,10 @@ export default function PaymentsHeader() {
           View and manage all payments made on the platform
         </p>
       </div>
-      <button className="btn btn-primary">Initiate Payment</button>
+      <button className="btn btn-primary" onClick={()=>{
+      document.getElementById('my_modal_3').showModal()
+      }}>Initiate Payment</button>
+      <InitiatePaymentModal setPayments={setPayments} />
     </div>
   );
 }

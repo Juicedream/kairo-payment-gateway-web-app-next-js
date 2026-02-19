@@ -1,6 +1,33 @@
 import Image from "next/image";
+import formatDate from "../../utils/date";
+import PaymentDetails from "./PaymentDetails";
+import { useState } from "react";
+import { deletePaymentByPayID, getAllPayments } from "../../lib/payments";
+import { toast } from "react-toastify";
 
-export default function PaymentsTable({ payments }) {
+export default function PaymentsTable({ payments, setPayments }) {
+  const [currentPayment, setCurrentPayment] = useState(null);
+  function handleViewDetails(payment) {
+    setCurrentPayment(payment);
+    document.getElementById("my_modal_4").showModal();
+  }
+
+  async function handleDeletePayment(payId) {
+    try {
+      const response = await deletePaymentByPayID(payId);
+      if (response?.error) {
+        toast.error(response.error);
+      } else {
+        toast.success("Payment with ID " + payId + " deleted successfully");
+      }
+    } catch (error) {
+      console.error("Error deleting payment with ID " + payId, error);
+      toast.error("An error occurred while deleting payment with ID " + payId);
+    } finally {
+      const updatedPayments = await getAllPayments();
+      setPayments(updatedPayments?.payments || []);
+    }
+  }
   return (
     <>
       {payments.map((payment) => (
@@ -38,9 +65,29 @@ export default function PaymentsTable({ payments }) {
             ₦ {Number(payment?.amount).toLocaleString()}
           </td>
           <td>{payment?.paymentId}</td>
-          <td>{payment?.status}</td>
-          <td>
-            <button className="btn btn-ghost btn-xs">details</button>
+          <td>{formatDate(payment?.createdAt)}</td>
+          <td
+            className={`px-2 py-1 rounded-md text-sm font-semibold text-center
+            ${payment?.status === "successful" ? "text-green-500" : payment.status === "pending" ? "text-yellow-500" : "text-red-500"}
+            `}
+          >
+            {(payment?.status).toUpperCase()}
+          </td>
+          <td className="flex items-center gap-2">
+            <button
+              className="btn btn-soft btn-primary btn-xs"
+              onClick={() => handleViewDetails(payment)}
+            >
+              Details
+            </button>
+            <button className="btn btn-accent btn-xs">Make Payment</button>
+            <button
+              className="btn btn-error btn-xs"
+              onClick={() => handleDeletePayment(payment?.paymentId)}
+            >
+              Delete
+            </button>
+            <PaymentDetails payment={currentPayment} />
           </td>
         </tr>
       ))}
