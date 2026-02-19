@@ -25,7 +25,7 @@ export default async function TransactionsPage() {
                   <th>Date</th>
                   <th>Status</th>
                   <th>Payment Type</th>
-                  <th>Action</th>
+                  {/* <th>Action</th> */}
                 </tr>
               </thead>
               <tbody>

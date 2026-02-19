@@ -36,6 +36,10 @@ export default function PaymentsTable({ payments, setPayments }) {
       document.getElementById('my_modal_5').close();
     }
   }
+  function handleMakePayment(payment) { 
+    setCurrentPayment(payment);
+    window.location.href= payment?.paymentUrl || "#";
+  }
   return (
     <>
       {payments.map((payment) => (
@@ -88,14 +92,14 @@ export default function PaymentsTable({ payments, setPayments }) {
             >
               Details
             </button>
-            <button className="btn btn-accent btn-xs">Make Payment</button>
+            { payment.status !== "successful" && <button className="btn btn-accent btn-xs" onClick={() => handleMakePayment(payment)}>Make Payment</button>}
             <PaymentDetails payment={currentPayment} />
-            <button
+           {payment.status !== "successful" && <button
               className="btn btn-error btn-xs"
               onClick={() => showDeleteConfirmation(payment)}
             >
               Delete
-            </button>
+            </button>}
 
             <DeletePaymentModal 
               onDelete={handleDeletePayment}

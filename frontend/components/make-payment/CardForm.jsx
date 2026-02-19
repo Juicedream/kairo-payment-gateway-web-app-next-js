@@ -2,6 +2,7 @@ import { Calendar, CreditCard, Lock, RefreshCcw, User } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { socketClientConnection } from "../../app/lib/socket";
 
 function CardForm({ setLoading, setError, setSuccess, setErrorMessage, amount, id }) {
   const [fullName, setFullName] = useState("");
@@ -134,9 +135,10 @@ function CardForm({ setLoading, setError, setSuccess, setErrorMessage, amount, i
           setTimeout(() => setError(true), 3000);
           return;
         }
-
+        let socket = socketClientConnection();
+        socket.emit("pay-with-card", { paymentID, amount });
         setSuccess(true);
-        setTimeout(() => router.push("/"), 6000);   
+        setTimeout(() => router.back(), 4000);   
       }
       payWithCard()
     } catch (error) {

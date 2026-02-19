@@ -1,14 +1,26 @@
 "use client";
+import PaymentsHeader from "./PaymentsHeader";
+import PaymentsTable from "./PaymentsTable";
 import { useEffect, useState } from "react";
 import { getAllPayments } from "../../lib/payments";
 import { Loader } from "lucide-react";
 import { ToastContainer } from "react-toastify";
-import PaymentsHeader from "./PaymentsHeader";
-import PaymentsTable from "./PaymentsTable";
+import { socketClientConnection } from "../../lib/socket";
 
 export default function PaymentsPage() {
   const [payments, setPayments] = useState([]);
   const [loadingData, setLoadingData] = useState(true);
+  let socket = socketClientConnection();
+
+  useEffect(() => {
+    socket.on("pay-with-card", async (data) => {
+      console.log("Payment processed:", data);
+      // Optionally, you can show a notification or update the UI based on the payment data
+      const response = await getAllPayments();
+      setPayments(response.payments || []);
+    });
+  });
+
   useEffect(() => {
     async function fetchData() {
       try {
@@ -16,17 +28,16 @@ export default function PaymentsPage() {
         setPayments(response.payments || []);
       } catch (error) {
         console.error("Error fetching payments:", error);
-      }finally {
-          setLoadingData(false);
+      } finally {
+        setLoadingData(false);
       }
-
     }
     fetchData();
   }, []);
   //   console.log("Payments ", payments);
   return (
     <div className="p-4">
-    <ToastContainer />
+      <ToastContainer />
       <PaymentsHeader setPayments={setPayments} />
       {loadingData ? (
         <Loader className="animate-spin text-center mt-8" />

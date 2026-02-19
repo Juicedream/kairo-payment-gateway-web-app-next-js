@@ -61,7 +61,7 @@ function MakePaymentPage() {
       const response = await getPaymentInfo(id);
       if (!response || response?.info.status !== "pending") {
         alert("Invalid or Expired Payment");
-        router.push("/");
+        router.back();
         return;
       }
       setPaymentInfo(response?.info);
