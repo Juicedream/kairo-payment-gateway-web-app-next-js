@@ -98,8 +98,7 @@ function CardForm({ setLoading, setError, setSuccess, setErrorMessage, amount, i
     cvv
   ])
   const handleSubmit = (e) => {
-    e.preventDefault();
-    
+    e.preventDefault(); 
     try {
       if (!cardNumber || !expDate || !fullName || !cvv) {
         setError(true);
@@ -129,16 +128,19 @@ function CardForm({ setLoading, setError, setSuccess, setErrorMessage, amount, i
             amount
           })
         });
+
         const data = await response.json();
         if (data?.error) {
           setErrorMessage("Payment failed, " + data?.error || "try another card");
           setTimeout(() => setError(true), 3000);
           return;
         }
+        
         let socket = socketClientConnection();
         socket.emit("pay-with-card", { paymentID, amount });
         setSuccess(true);
-        setTimeout(() => router.back(), 4000);   
+        setTimeout(() => router.back(), 4000);
+
       }
       payWithCard()
     } catch (error) {

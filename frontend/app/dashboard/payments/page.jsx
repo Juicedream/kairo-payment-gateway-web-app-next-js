@@ -7,6 +7,10 @@ import { Loader } from "lucide-react";
 import { ToastContainer } from "react-toastify";
 import { socketClientConnection } from "../../lib/socket";
 
+const websocket = new WebSocket(
+  "wss://blink-pay-bank-app-backend.onrender.com",
+);
+
 export default function PaymentsPage() {
   const [payments, setPayments] = useState([]);
   const [loadingData, setLoadingData] = useState(true);
@@ -21,18 +25,29 @@ export default function PaymentsPage() {
     });
   });
 
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        const response = await getAllPayments();
-        setPayments(response.payments || []);
-      } catch (error) {
-        console.error("Error fetching payments:", error);
-      } finally {
-        setLoadingData(false);
-      }
+  async function fetchData() {
+    try {
+      const response = await getAllPayments();
+      setPayments(response.payments || []);
+    } catch (error) {
+      console.error("Error fetching payments:", error);
+    } finally {
+      setLoadingData(false);
     }
+  }
+  useEffect(() => {
     fetchData();
+  }, []);
+  useEffect(() => {
+    websocket.onopen = () => {
+      console.log("Connected to blink pay from Payments page");
+    }
+    websocket.onmessage = (event) => {
+      const { event: evt } = JSON.parse(event.data);
+      if (evt === "money_recieved") {
+        fetchData();
+      }
+    };
   }, []);
   //   console.log("Payments ", payments);
   return (

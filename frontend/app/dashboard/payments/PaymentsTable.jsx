@@ -92,9 +92,9 @@ export default function PaymentsTable({ payments, setPayments }) {
             >
               Details
             </button>
-            { payment.status !== "successful" && <button className="btn btn-accent btn-xs" onClick={() => handleMakePayment(payment)}>Make Payment</button>}
+            { payment.status === "pending" && <button className="btn btn-accent btn-xs" onClick={() => handleMakePayment(payment)}>Make Payment</button>}
             <PaymentDetails payment={currentPayment} />
-           {payment.status !== "successful" && <button
+           {payment.status === "pending" && <button
               className="btn btn-error btn-xs"
               onClick={() => showDeleteConfirmation(payment)}
             >

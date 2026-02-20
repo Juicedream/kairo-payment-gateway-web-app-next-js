@@ -1,4 +1,4 @@
-const { initiatePayment, getPaymentInfoByPayID, payWithCard, getVirtualAccount, getAllTransactions, deletePaymentByPayID } = require("../controllers/payments.controller.js");
+const { initiatePayment, getPaymentInfoByPayID, payWithCard, getVirtualAccount, getAllTransactions, deletePaymentByPayID, getTransactionByPaymentIDFromBlinkpay, updateTransaction } = require("../controllers/payments.controller.js");
 
 const router = require("express").Router();
 
@@ -10,6 +10,8 @@ router
     .post("/generate-account-number", getVirtualAccount)
     .get("/all", getAllTransactions)
     .delete("/delete-payment/:payId", deletePaymentByPayID)
+    .get("/bank-transaction/:paymentId", getTransactionByPaymentIDFromBlinkpay)
+    .post("/update-transaction", updateTransaction);
 
 
 module.exports = router;

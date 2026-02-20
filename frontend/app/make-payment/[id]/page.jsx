@@ -8,9 +8,17 @@ import Success from "../../../components/Success";
 import { LoaderPinwheel, X } from "lucide-react";
 import { Suspense, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { getVirtualAccount } from "../../lib/payments";
+import {
+  getTransactionDetails,
+  getVirtualAccount,
+  updateTransaction,
+} from "../../lib/payments";
 import { ToastContainer, toast } from "react-toastify";
 import formatDate from "../../utils/date";
+
+const websocket = new WebSocket(
+  "wss://blink-pay-bank-app-backend.onrender.com",
+);
 
 function MakePaymentPage() {
   const { id } = useParams();
@@ -117,6 +125,62 @@ function MakePaymentPage() {
     setPaymentPage();
   }, []);
 
+  const handleMadeTransfer = async (payment_id, amount) => {
+    setLoading(true);
+    try {
+      const response = await getTransactionDetails(payment_id);
+      if (response?.error) {
+        toast.error("Why are you lying?? ehn???");
+        setLoading(false);
+        return;
+      }
+      if (response?.transactions?.payment_id) {
+        const status = "successful";
+        const updatePayment = await updateTransaction(
+          payment_id,
+          status,
+          amount,
+        );
+     
+        if (updatePayment?.transaction?.status) {
+          toast.success("Payment received successfully! 😍");
+          setTimeout(() => {
+            router.back();
+          }, 3000);
+        }
+        if (updatePayment.error) {
+          toast.error("Payment was not received 🥺, try again later!");
+        }
+      }
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setTimeout(() => {
+        setLoading(false);
+      }, 4000);
+    }
+  };
+
+  useEffect(() => {
+    websocket.onopen = () => {
+      console.log("Connected to blinkpay");
+    };
+    websocket.onmessage = (event) => {
+      const { event: evt, data } = JSON.parse(event.data);
+      if (
+        data?.transaction?.payment_id === paymentInfo?.paymentId &&
+        data?.transaction?.amount === paymentInfo?.amount
+      ) {
+        if (evt === "money_recieved") {
+          toast.success("Money Recieved !");
+        }
+        if (evt === "transfer_initialized") {
+          toast.success("Transfer executing...");
+        }
+      }
+    };
+  }, []);
+
   return (
     <div className="w-full flex flex-row h-screen bg-[url('/background.png')] items-center justify-center bg-center">
       <div className="absolute inset-0 bg-black/90" />
@@ -203,7 +267,7 @@ function MakePaymentPage() {
                     return (
                       <div
                         key="transfer"
-                        className="mt-4 w-80 h-70 bg-white rounded-md border-2 border-slate-200 flex flex-col items-center text-accent-content"
+                        className="mt-4 w-80 h-75 bg-white rounded-md border-2 border-slate-200 flex flex-col items-center text-accent-content"
                       >
                         {loading ? (
                           <>
@@ -214,32 +278,40 @@ function MakePaymentPage() {
                             <p className="text-sm mt-4 text-center">
                               Transfer the amount to the following account:
                             </p>
-                            
+
                             <div className="w-64 p-4 bg-gray-100 rounded-md mt-4">
                               <p className="text-xs">
                                 Account Name: <b>{virtualAccountInfo?.name}</b>
                               </p>
                               <p className="text-xs mt-2">
-                                Amount: <b>{virtualAccountInfo?.acc_number}</b>
+                                Account Number: <b>{virtualAccountInfo?.acc_number}</b>
                               </p>
                               <p className="text-xs mt-2">
-                                Account Number:{" "}
+                                Amount:{" "}
                                 <b>{virtualAccountInfo?.amount}</b>
                               </p>
                               <p className="text-xs mt-2">
                                 Bank: <b>{virtualAccountInfo?.bank_name}</b>
                               </p>
                               {timer !== "00:00" ? (
-                                <p className="text-xs mt-2">
-                                Timer:{" "}
-                                  <b className="text-lg text-red-500">
-                                    {timer}
-                                  </b>
-                                </p>
+                                <>
+                                  <p className="text-xs mt-2">
+                                    Timer:{" "}
+                                    <b className="text-lg text-red-500">
+                                      {timer}
+                                    </b>
+                                  </p>
+                                  <button
+                                    onClick={() =>
+                                      handleMadeTransfer(paymentInfo?.paymentId, paymentInfo?.amount)
+                                    }
+                                    className="btn btn-soft btn-accent mt-2"
+                                  >
+                                    I have made the transfer
+                                  </button>
+                                </>
                               ) : (
-                                <p
-                                  className="bg-red-700 text-center text-white mt-2 p-2 rounded-md text-xs"
-                                >
+                                <p className="bg-red-700 text-center text-white mt-2 p-2 rounded-md text-xs">
                                   Expired
                                 </p>
                               )}
