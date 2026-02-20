@@ -1,24 +1,29 @@
 "use client";
-import { LoaderPinwheel, X } from "lucide-react";
-import { Suspense, useEffect, useState } from "react";
 import DarkNightToggler from "../../../components/DarkNightToggler";
 import MakePaymentHeader from "../../../components/make-payment/MakePaymentHeader";
 import CardForm from "../../../components/make-payment/CardForm";
 import Loader from "../../../components/Loader";
 import ToastAlert from "../../../components/ToastAlert";
 import Success from "../../../components/Success";
+import { LoaderPinwheel, X } from "lucide-react";
+import { Suspense, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { getVirtualAccount } from "../../lib/payments";
+import { ToastContainer, toast } from "react-toastify";
+import formatDate from "../../utils/date";
 
 function MakePaymentPage() {
   const { id } = useParams();
   const router = useRouter();
 
   const [paymentInfo, setPaymentInfo] = useState({});
+  const [virtualAccountInfo, setVirtualAccountInfo] = useState(null);
   const [loading, setLoading] = useState(false);
   const [isPageLoading, setIsPageLoading] = useState(true);
   const [showCardAlertError, setShowCardAlertError] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [success, setSuccess] = useState(false);
+  const [timer, setTimer] = useState("02:00");
 
   const [options, setOptions] = useState([
     { name: "Bank", clicked: false },
@@ -28,7 +33,7 @@ function MakePaymentPage() {
   ]);
 
   const handleClickedOption = (choice) => {
-    options.map((option, index) => {
+    options.map(async (option, index) => {
       if (option.name === choice) {
         let newOptions = [
           { name: "Bank", clicked: false },
@@ -38,10 +43,34 @@ function MakePaymentPage() {
         ];
         newOptions[index].clicked = true;
         setOptions(newOptions);
+        if (choice === "Transfer") {
+          await getVirtualAccountInfo(
+            paymentInfo?.amount,
+            paymentInfo?.paymentId,
+          );
+          await countdownTimer(2);
+        }
         return;
       }
     });
   };
+  const countdownTimer = async (numberofMins) => {
+    let time = numberofMins * 60 - 1;
+    const interval = setInterval(() => {
+      const mins = Math.floor(time / 60);
+      const secs = time % 60;
+      setTimer(
+        `${mins < 10 ? "0" + mins : mins}:${secs < 10 ? "0" + secs : secs}`,
+      );
+      time--;
+      if (time < 0) {
+        clearInterval(interval);
+        setTimer("00:00");
+        router.back();
+      }
+    }, 1000);
+  };
+
   const getPaymentInfo = async (payId) => {
     try {
       const res = await fetch(
@@ -49,11 +78,29 @@ function MakePaymentPage() {
       );
       const data = await res.json();
       if (data?.status !== "pending") {
-       return data 
+        return data;
       }
       return data?.info;
     } catch (error) {
       console.error(error);
+    }
+  };
+  const getVirtualAccountInfo = async (amount, payment_id) => {
+    setLoading(true);
+    if (virtualAccountInfo) {
+      setLoading(false);
+      return;
+    }
+    try {
+      const response = await getVirtualAccount(amount, payment_id);
+      if (response?.status === "success") {
+        setVirtualAccountInfo(response?.data?.virtual_account);
+      }
+    } catch (error) {
+      console.error("Error occurred while generating virtual account ", error);
+      toast.error("Failed to generate Virtual Account");
+    } finally {
+      setLoading(false);
     }
   };
   useEffect(() => {
@@ -69,12 +116,11 @@ function MakePaymentPage() {
     }
     setPaymentPage();
   }, []);
- 
-  // console.log(errorMessage);
-  // console.log(showCardAlertError);
+
   return (
     <div className="w-full flex flex-row h-screen bg-[url('/background.png')] items-center justify-center bg-center">
       <div className="absolute inset-0 bg-black/90" />
+      <ToastContainer />
       {/* toggle switch */}
       <DarkNightToggler />
       {/*Toast Alert  */}
@@ -148,6 +194,64 @@ function MakePaymentPage() {
                         ) : (
                           <>
                             <Loader />
+                          </>
+                        )}
+                      </div>
+                    );
+                  }
+                  if (option.name === "Transfer" && option.clicked === true) {
+                    return (
+                      <div
+                        key="transfer"
+                        className="mt-4 w-80 h-70 bg-white rounded-md border-2 border-slate-200 flex flex-col items-center text-accent-content"
+                      >
+                        {loading ? (
+                          <>
+                            <Loader />
+                          </>
+                        ) : virtualAccountInfo !== null ? (
+                          <>
+                            <p className="text-sm mt-4 text-center">
+                              Transfer the amount to the following account:
+                            </p>
+                            
+                            <div className="w-64 p-4 bg-gray-100 rounded-md mt-4">
+                              <p className="text-xs">
+                                Account Name: <b>{virtualAccountInfo?.name}</b>
+                              </p>
+                              <p className="text-xs mt-2">
+                                Amount: <b>{virtualAccountInfo?.acc_number}</b>
+                              </p>
+                              <p className="text-xs mt-2">
+                                Account Number:{" "}
+                                <b>{virtualAccountInfo?.amount}</b>
+                              </p>
+                              <p className="text-xs mt-2">
+                                Bank: <b>{virtualAccountInfo?.bank_name}</b>
+                              </p>
+                              {timer !== "00:00" ? (
+                                <p className="text-xs mt-2">
+                                Timer:{" "}
+                                  <b className="text-lg text-red-500">
+                                    {timer}
+                                  </b>
+                                </p>
+                              ) : (
+                                <p
+                                  className="bg-red-700 text-center text-white mt-2 p-2 rounded-md text-xs"
+                                >
+                                  Expired
+                                </p>
+                              )}
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <p className="text-sm mt-4 text-center">
+                              No virtual account information available try again
+                              after a few seconds or choose another payment
+                              method
+                            </p>
                           </>
                         )}
                       </div>

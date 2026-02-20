@@ -123,23 +123,40 @@ const payWithCard = async (req, res) => {
   }
 }
 const getVirtualAccount = async (req, res) => {
-  const { amount } = req.body;
+  let { amount, payment_id } = req.body;
+  amount = Math.round(Number(amount));
+
   const email = process.env.EMAIL;
   const password = process.env.PASSWORD;
   const bankUri = process.env.BANK_URI + "/api/v1"
+  if (!amount) {
+    return res.status(400).json({
+      code: 400,
+      status: "failed",
+      error: "Amount is required"
+    });
+  }
+  if (!payment_id) {
+    return res.status(400).json({
+      code: 400,
+      status: "failed",
+      error: "Payment Id is required"
+    });
+  }
 try {
   // login into bank
-  const response = await fetch(bankUri + "/login", {
+  const response = await fetch(bankUri + "/auth/login", {
     method: "post",
     headers: {
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
-      email,
-      password
+      "email": email,
+      "password": password
     })
   });
 const loginData = await response.json();
+console.log("Login data from bank ", loginData);
 if (!loginData?.token) {
   return res.status(400).json({
     code: 400,
@@ -154,7 +171,7 @@ const getVirtualAccountData = await fetch(bankUri + "/account/create-virtual-acc
     "Content-Type": "application/json",
     "Authorization": `Bearer ${loginData?.token}`
   },
-  body: JSON.stringify({ amount })
+  body: JSON.stringify({ "amount": amount, "payment_id": payment_id })
 });
 const data = await getVirtualAccountData.json();
 if (!data) {
@@ -163,6 +180,13 @@ if (!data) {
     status: "failed",
     error: "Error generating virtual account number at the moment"
   })
+}
+if (data.code === 400 ) {
+  return res.status(400).json({
+    code: 400,
+    status: "failed",
+    error: data?.msg || "Error generating virtual account number at the moment"
+  });
 }
 return res.status(201).json({
   code: 201,
