@@ -17,19 +17,38 @@ const api_url = "/api/v1"
 
 // routes
 const PaymentRouter = require("./routes/payments.routes.js");
+const AuthRouter = require("./routes/auth/index.js");
+const userRouter = require("./routes/user/index.js")
 
 
-//cors options
 const corsOptions = {
-    origin: "http://localhost:3000",
-    methods: 'GET,POST,PUT,DELETE',
-}
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true); // allow non-browser tools like Postman
+    
+    const allowedOrigins = [
+      "http://localhost:3000",
+      "http://localhost:5500",
+    ];
+
+    if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+    } else {
+        console.log(origin, "not allowed");
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true,
+};
+
 app.use(cors(corsOptions)); // to allow frontend access
 app.use(express.json()); // to accept json requests
 
 
 // using routes in app
 app.use(api_url + "/payments", PaymentRouter);
+app.use(api_url + "/auth", AuthRouter);
+app.use(api_url + "/user", userRouter);
+
 
 // app health
 app.get("/health", (_, res) => {

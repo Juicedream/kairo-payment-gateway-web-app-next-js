@@ -1,7 +1,7 @@
 import { useState } from "react";
 import PaymentForm from "./PaymentForm";
 
-export function InitiatePaymentModal({setPayments}) {
+export function InitiatePaymentModal({setPayments, user}) {
   const min = 100;
   const max = 100000;
   const [email, setEmail] = useState("");
@@ -31,6 +31,8 @@ export function InitiatePaymentModal({setPayments}) {
         loading={loading}
         setLoading={setLoading}
         setPayments={setPayments}
+        apiKey={user?.apiKey}
+        userId={user?._id}
        />
       </div>
     </dialog>

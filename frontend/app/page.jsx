@@ -9,7 +9,7 @@ const websocket = new WebSocket(
 function LandingPage() {
   const router = useRouter();
   const handleGetStarted = () => {
-    router.push("/dashboard");
+    router.push("/login");
   };
 
   useEffect(() => {

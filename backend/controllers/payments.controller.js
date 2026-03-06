@@ -1,7 +1,9 @@
 const generatePaymentID = require("../utils/generatePaymentID");
 const PaymentModel = require("../models/payments.model.js");
+const UserModel = require("../models/user.model.js");
 const TransactionsModel = require("../models/transactions.model.js");
 const dotenv = require("dotenv");
+const { isValidObjectId } = require("mongoose");
 dotenv.config();
 
 const internalServerError = {
@@ -12,13 +14,25 @@ const internalServerError = {
 
 const initiatePayment = async (req, res) => {
   let { email, amount } = req.body;
+  let {_id: userId} = req.user;
   email = String(email).trim();
   amount = Number(amount) + 0.52;
-
+  if (!isValidObjectId(userId)) {
+    return res
+       .status(400)
+       .json({code: 400, status: "failed", error: "Invalid userId"});
+  }
   if (!email || !amount) {
     return res
       .status(400)
       .json({ code: 400, status: "failed", error: "All fields are required" });
+  }
+  const userExists = await UserModel.findById(userId);
+
+  if (!userExists) {
+     return res
+       .status(400)
+       .json({code: 400, status: "failed", error: "Invalid userId"});
   }
   try {
     const url = "http://localhost:3000/make-payment"; // this is a frontend link
@@ -35,6 +49,7 @@ const initiatePayment = async (req, res) => {
       amount,
       paymentId: paymentID,
       paymentUrl: url + "/" + paymentID,
+      userId
     });
 
     await newPayment.save();
@@ -112,7 +127,9 @@ const payWithCard = async (req, res) => {
     });
 
     let existingPayment = await PaymentModel.findOne({ paymentId: paymentID });
+    createTransaction.userId = existingPayment.userId;
     existingPayment.status = "successful";
+    await createTransaction.save();
     await existingPayment.save();
     return res.status(201).json({
       code: "201",
@@ -324,6 +341,7 @@ const getTransactionByPaymentIDFromBlinkpay = async (req, res) => {
 };
 const updateTransaction = async(req, res) => {
   let {payment_id, status, amount} = req.query;
+
   const existingPayment = await PaymentModel.findOne({ paymentId: payment_id});
   if (!payment_id || !status || !amount) {
     return res.status(400).json({
@@ -373,6 +391,7 @@ const updateTransaction = async(req, res) => {
       paymentType: "transfer",
       status,
       amount: Number(amount),
+      userId: existingPayment.userId,
   })
 
   await existingPayment.save();

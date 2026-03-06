@@ -1,10 +1,11 @@
 const { initiatePayment, getPaymentInfoByPayID, payWithCard, getVirtualAccount, getAllTransactions, deletePaymentByPayID, getTransactionByPaymentIDFromBlinkpay, updateTransaction } = require("../controllers/payments.controller.js");
+const { verifyApiKey } = require("../middlewares/auth.middleware.js");
 
 const router = require("express").Router();
 
 
 router 
-    .post("/initiate", initiatePayment)
+    .post("/initiate", verifyApiKey, initiatePayment)
     .get("/info/:payId", getPaymentInfoByPayID)
     .post("/pay-with-card", payWithCard)
     .post("/generate-account-number", getVirtualAccount)

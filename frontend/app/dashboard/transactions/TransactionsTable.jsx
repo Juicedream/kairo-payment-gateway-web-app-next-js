@@ -6,7 +6,7 @@ import { useState } from "react";
 
 export default function TransactionsTable({ transactions }) {
   const [currentTransaction, setCurrentTransaction] = useState(null);
-  console.log(transactions[0]);
+  if (transactions.length < 1) return null;
   return (
     <>
       {transactions.map((transaction) => (

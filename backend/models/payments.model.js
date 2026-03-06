@@ -22,6 +22,11 @@ const paymentSchema = new mongoose.Schema({
         type: String,
         enum: ["successful", "pending", "failed"],
         default: "pending"
+    },
+    userId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true,
     }
 }, {timestamps: true});
 

@@ -1,22 +1,30 @@
-export const getAllPayments = async () => {
+export const getAllPayments = async (userId) => {
   const url = `${process.env.NEXT_PUBLIC_API_URL}/payments/all`;
   const response = await fetch(url);
   const data = await response.json();
-  return data;
+  
+  if (data?.payments.length < 1) {
+    return data;
+  }
+  let userData = data?.payments.filter((payment) => payment?.userId === userId );
+  return userData;
 };
 
-export const initiatePayment = async (email, amount) => {
+export const initiatePayment = async (email, amount, apiKey) => {
   const url = `${process.env.NEXT_PUBLIC_API_URL}/payments/initiate`;
   const response = await fetch(url, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      "x-api-key": apiKey,
     },
     body: JSON.stringify({ email, amount }),
   });
   const data = await response.json();
   return data;
 };
+
+
 export const deletePaymentByPayID = async (payId) => {
   const url = `${process.env.NEXT_PUBLIC_API_URL}/payments/delete-payment/${payId}`;
   const response = await fetch(url, {

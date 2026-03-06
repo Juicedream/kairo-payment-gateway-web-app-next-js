@@ -5,30 +5,32 @@ import { useEffect, useState } from "react";
 import { getAllPayments } from "../../lib/payments";
 import { Loader } from "lucide-react";
 import { ToastContainer } from "react-toastify";
-import { socketClientConnection } from "../../lib/socket";
+// import { socketClientConnection } from "../../lib/socket";
+import useAuthStore from "../../../store/useAuthStore";
 
-const websocket = new WebSocket(
-  "wss://blink-pay-bank-app-backend.onrender.com",
-);
+// const websocket = new WebSocket(
+//   "wss://blink-pay-bank-app-backend.onrender.com",
+// );
 
 export default function PaymentsPage() {
   const [payments, setPayments] = useState([]);
   const [loadingData, setLoadingData] = useState(true);
-  let socket = socketClientConnection();
+  const {user} = useAuthStore();
+  // let socket = socketClientConnection();
 
-  useEffect(() => {
-    socket.on("pay-with-card", async (data) => {
-      console.log("Payment processed:", data);
-      // Optionally, you can show a notification or update the UI based on the payment data
-      const response = await getAllPayments();
-      setPayments(response.payments || []);
-    });
-  });
+  // useEffect(() => {
+  //   socket.on("pay-with-card", async (data) => {
+  //     console.log("Payment processed:", data);
+  //     // Optionally, you can show a notification or update the UI based on the payment data
+  //   });
+  //   const response = await getAllPayments();
+  //   setPayments(response.payments || []);
+  // });
 
   async function fetchData() {
     try {
-      const response = await getAllPayments();
-      setPayments(response.payments || []);
+      const response = await getAllPayments(user?._id);
+      setPayments(response || []);
     } catch (error) {
       console.error("Error fetching payments:", error);
     } finally {
@@ -38,22 +40,22 @@ export default function PaymentsPage() {
   useEffect(() => {
     fetchData();
   }, []);
-  useEffect(() => {
-    websocket.onopen = () => {
-      console.log("Connected to blink pay from Payments page");
-    }
-    websocket.onmessage = (event) => {
-      const { event: evt } = JSON.parse(event.data);
-      if (evt === "money_recieved") {
-        fetchData();
-      }
-    };
-  }, []);
+  // useEffect(() => {
+  //   websocket.onopen = () => {
+  //     console.log("Connected to blink pay from Payments page");
+  //   }
+  //   websocket.onmessage = (event) => {
+  //     const { event: evt } = JSON.parse(event.data);
+  //     if (evt === "money_recieved") {
+  //       fetchData();
+  //     }
+  //   };
+  // }, []);
   //   console.log("Payments ", payments);
   return (
     <div className="p-4">
       <ToastContainer />
-      <PaymentsHeader setPayments={setPayments} />
+      <PaymentsHeader setPayments={setPayments} user={user} />
       {loadingData ? (
         <Loader className="animate-spin text-center mt-8" />
       ) : payments.length === 0 ? (

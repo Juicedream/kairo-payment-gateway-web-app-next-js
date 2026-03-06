@@ -16,6 +16,8 @@ export default function PaymentForm({
   loading,
   setLoading,
   setPayments,
+  apiKey,
+  userId
 }) {
   useEffect(() => {
     if (!email || !amount) {
@@ -33,7 +35,7 @@ export default function PaymentForm({
     e.preventDefault();
     setLoading(true);
     try {
-      const response = await initiatePayment(email, amount);
+      const response = await initiatePayment(email, amount, apiKey);
       if (response.error) {
         toast.error(response.error);
       } else {
@@ -42,12 +44,12 @@ export default function PaymentForm({
     } catch (err) {
       console.error("Error initiating payment ", err);
     } finally {
-      const response = await getAllPayments();
-      setPayments(response.payments || []);
+      const response = await getAllPayments(userId);
+      setPayments(response || []);
       document.getElementById("my_modal_3").close();
       setLoading(false);
       setEmail("");
-      setAmount("");
+      setAmount(0);
     }
   }
 
