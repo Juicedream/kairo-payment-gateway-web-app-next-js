@@ -9,12 +9,14 @@ import { LoaderPinwheel, X } from "lucide-react";
 import { Suspense, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
+  generateQRCode,
   getTransactionDetails,
   getVirtualAccount,
   updateTransaction,
 } from "../../lib/payments";
 import { ToastContainer, toast } from "react-toastify";
 import formatDate from "../../utils/date";
+import Image from "next/image";
 
 const websocket = new WebSocket(
   "wss://blink-pay-bank-app-backend.onrender.com",
@@ -23,7 +25,6 @@ const websocket = new WebSocket(
 function MakePaymentPage() {
   const { id } = useParams();
   const router = useRouter();
- 
 
   const [paymentInfo, setPaymentInfo] = useState({});
   const [virtualAccountInfo, setVirtualAccountInfo] = useState(null);
@@ -33,19 +34,23 @@ function MakePaymentPage() {
   const [errorMessage, setErrorMessage] = useState("");
   const [success, setSuccess] = useState(false);
   const [timer, setTimer] = useState("02:00");
+  const [qrCode, setQrCode] = useState("");
 
   const [options, setOptions] = useState([
     { name: "Bank", clicked: false },
+    { name: "QR", clicked: false },
     { name: "Card", clicked: true },
     { name: "Transfer", clicked: false },
     { name: "Wallet", clicked: false },
   ]);
 
   const handleClickedOption = (choice) => {
+    console.log(choice);
     options.map(async (option, index) => {
       if (option.name === choice) {
         let newOptions = [
           { name: "Bank", clicked: false },
+          { name: "QR", clicked: false },
           { name: "Card", clicked: false },
           { name: "Transfer", clicked: false },
           { name: "Wallet", clicked: false },
@@ -58,6 +63,9 @@ function MakePaymentPage() {
             paymentInfo?.paymentId,
           );
           await countdownTimer(2);
+        }
+        if (choice === "QR") {
+          await handleGenerateQRCODE();
         }
         return;
       }
@@ -101,7 +109,7 @@ function MakePaymentPage() {
       return;
     }
     try {
-      const response = await getVirtualAccount(amount, payment_id);
+      const response = await getVirtualAccount(amount, payment_id, paymentInfo?.blinkpay_email);
       if (response?.status === "success") {
         setVirtualAccountInfo(response?.data?.virtual_account);
       }
@@ -112,6 +120,7 @@ function MakePaymentPage() {
       setLoading(false);
     }
   };
+
   useEffect(() => {
     async function setPaymentPage() {
       const response = await getPaymentInfo(id);
@@ -129,7 +138,11 @@ function MakePaymentPage() {
   const handleMadeTransfer = async (payment_id, amount) => {
     setLoading(true);
     try {
-      const response = await getTransactionDetails(payment_id);
+      const response = await getTransactionDetails(
+        payment_id,
+        paymentInfo?.blinkpay_email,
+      );
+      console.log(response);
       if (response?.error) {
         toast.error("Why are you lying?? ehn???");
         setLoading(false);
@@ -142,7 +155,7 @@ function MakePaymentPage() {
           status,
           amount,
         );
-     
+
         if (updatePayment?.transaction?.status) {
           toast.success("Payment received successfully! 😍");
           setTimeout(() => {
@@ -159,6 +172,27 @@ function MakePaymentPage() {
       setTimeout(() => {
         setLoading(false);
       }, 4000);
+    }
+  };
+  const handleGenerateQRCODE = async () => {
+    setLoading(true);
+    try {
+      const res = await generateQRCode(
+        paymentInfo?.paymentId,
+        paymentInfo?.amount,
+      );
+      console.log(res);
+      if (res?.error) {
+        throw new Error(res.error);
+      }
+      if (res?.qrCode) {
+        setQrCode(res?.qrCode);
+        setLoading(false);
+      }
+    } catch (error) {
+      console.log(error);
+      toast.error("An Error occurred while generating QR Code");
+      setLoading(false);
     }
   };
 
@@ -224,7 +258,7 @@ function MakePaymentPage() {
                   desc="Choose a payment option"
                 />
                 {/* options */}
-                <div className="w-80 rounded-full bg-gray-400/50 h-10 py-1 mt-4 flex flex-row justify-between px-1">
+                <div className="w-90 rounded-full bg-gray-400/50 h-10 py-1 mt-4 flex flex-row justify-between px-1">
                   {options.map((option, index) => (
                     <button
                       key={index}
@@ -285,11 +319,11 @@ function MakePaymentPage() {
                                 Account Name: <b>{virtualAccountInfo?.name}</b>
                               </p>
                               <p className="text-xs mt-2">
-                                Account Number: <b>{virtualAccountInfo?.acc_number}</b>
+                                Account Number:{" "}
+                                <b>{virtualAccountInfo?.acc_number}</b>
                               </p>
                               <p className="text-xs mt-2">
-                                Amount:{" "}
-                                <b>{virtualAccountInfo?.amount}</b>
+                                Amount: <b>{virtualAccountInfo?.amount}</b>
                               </p>
                               <p className="text-xs mt-2">
                                 Bank: <b>{virtualAccountInfo?.bank_name}</b>
@@ -304,7 +338,10 @@ function MakePaymentPage() {
                                   </p>
                                   <button
                                     onClick={() =>
-                                      handleMadeTransfer(paymentInfo?.paymentId, paymentInfo?.amount)
+                                      handleMadeTransfer(
+                                        paymentInfo?.paymentId,
+                                        paymentInfo?.amount,
+                                      )
                                     }
                                     className="btn btn-soft btn-accent mt-2"
                                   >
@@ -325,6 +362,41 @@ function MakePaymentPage() {
                               after a few seconds or choose another payment
                               method
                             </p>
+                          </>
+                        )}
+                      </div>
+                    );
+                  }
+                  if (option.name === "QR" && option.clicked === true) {
+                    return (
+                      <div
+                        key="QR"
+                        className="mt-4 w-80 h-75 bg-white rounded-md border-2 border-slate-200 flex flex-col items-center justify-center text-accent-content"
+                      >
+                        {loading && <Loader />}
+                        {!loading && qrCode && (
+                          <>
+                            <Image
+                              className="w-auto h-auto"
+                              src={qrCode}
+                              width={200}
+                              height={200}
+                              alt={"Qr Code Image"}
+                            />
+                            <p className="text-xs mt-8 text-accent-content">
+                              Open your Blink Pay app and Scan this Code.
+                            </p>
+                            <button
+                              onClick={() =>
+                                handleMadeTransfer(
+                                  paymentInfo?.paymentId,
+                                  paymentInfo?.amount,
+                                )
+                              }
+                              className="mt-6 btn"
+                            >
+                              I have made this payment
+                            </button>
                           </>
                         )}
                       </div>

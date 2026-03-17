@@ -1,4 +1,4 @@
-const { initiatePayment, getPaymentInfoByPayID, payWithCard, getVirtualAccount, getAllTransactions, deletePaymentByPayID, getTransactionByPaymentIDFromBlinkpay, updateTransaction } = require("../controllers/payments.controller.js");
+const { initiatePayment, getPaymentInfoByPayID, payWithCard, getVirtualAccount, getAllTransactions, deletePaymentByPayID, getTransactionByPaymentIDFromBlinkpay, updateTransaction, generateQrCodePayment } = require("../controllers/payments.controller.js");
 const { verifyApiKey } = require("../middlewares/auth.middleware.js");
 
 const router = require("express").Router();
@@ -12,7 +12,8 @@ router
     .get("/all", getAllTransactions)
     .delete("/delete-payment/:payId", deletePaymentByPayID)
     .get("/bank-transaction/:paymentId", getTransactionByPaymentIDFromBlinkpay)
-    .post("/update-transaction", updateTransaction);
+    .post("/update-transaction", updateTransaction)
+    .post('/generate-qrcode-payment/:paymentId', generateQrCodePayment);
 
 
 

@@ -40,9 +40,10 @@ export default function PaymentsTable({ payments, setPayments }) {
     setCurrentPayment(payment);
     window.location.href= payment?.paymentUrl || "#";
   }
+
   return (
     <>
-      {payments.map((payment) => (
+      {payments.length < 1 ? <p>No Payments found</p> : payments.map((payment) => (
         <tr key={payment._id}>
           <th>
             <label>

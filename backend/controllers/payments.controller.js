@@ -4,6 +4,8 @@ const UserModel = require("../models/user.model.js");
 const TransactionsModel = require("../models/transactions.model.js");
 const dotenv = require("dotenv");
 const { isValidObjectId } = require("mongoose");
+const Payment = require("../models/payments.model.js");
+const User = require("../models/user.model.js");
 dotenv.config();
 
 const internalServerError = {
@@ -29,17 +31,21 @@ const initiatePayment = async (req, res) => {
   }
   const userExists = await UserModel.findById(userId);
 
-  
   if (!userExists) {
     return res
-    .status(400)
-    .json({ code: 400, status: "failed", error: "Invalid userId" });
+      .status(400)
+      .json({ code: 400, status: "failed", error: "Invalid userId" });
   }
 
-  if (!userExists?.blinkpay_account_email || !userExists?.blinkpay_account_email) {
-    return res
-      .status(400)
-      .json({ code: 400, status: "failed", error: "Error - You must have/create a blinkpay account to continue" });
+  if (
+    !userExists?.blinkpay_account_email ||
+    !userExists?.blinkpay_account_number
+  ) {
+    return res.status(400).json({
+      code: 400,
+      status: "failed",
+      error: "Error - You must have/create a blinkpay account to continue",
+    });
   }
   try {
     const url = "http://localhost:3000/make-payment"; // this is a frontend link
@@ -55,8 +61,10 @@ const initiatePayment = async (req, res) => {
       email,
       amount,
       paymentId: paymentID,
-      paymentUrl: url + "/" + paymentID + "?email=" + userExists.blinkpay_account_email,
+      paymentUrl:
+        url + "/" + paymentID + "?email=" + userExists.blinkpay_account_email,
       userId,
+      blinkpay_email: userExists?.blinkpay_account_email,
     });
 
     await newPayment.save();
@@ -113,7 +121,7 @@ const payWithCard = async (req, res) => {
   //   });
   // }
   if (!cardNumber || !expiryDate || !cvv || !paymentID || !amount) {
-    console.log("1. here")
+    console.log("1. here");
     return res.status(400).json({
       code: 400,
       status: "failed",
@@ -150,27 +158,29 @@ const payWithCard = async (req, res) => {
     let user = await UserModel.findById(existingPayment?.userId);
 
     if (!user) {
-      console.log("2. here")
+      console.log("2. here");
       return res.status(404).json({
-
-         code: 404,
+        code: 404,
         status: "failed",
         error: "Card Payment Failed - Receiver account not found",
-      })
+      });
     }
 
-    const response = await fetch(`${url}?email=${user.blinkpay_account_email}`, {
-      method: "post",
-      headers: {
-        "Content-Type": "application/json",
+    const response = await fetch(
+      `${url}?email=${user.blinkpay_account_email}`,
+      {
+        method: "post",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          pan_number: cardNumber,
+          cvv,
+          expiry_date: expiryDate,
+          amount,
+        }),
       },
-      body: JSON.stringify({
-        pan_number : cardNumber,
-        cvv,
-        expiry_date: expiryDate,
-        amount
-      })
-    });
+    );
     const cardPayment = await response.json();
     if (cardPayment.stack) {
       createTransaction = await TransactionsModel.create({
@@ -184,13 +194,12 @@ const payWithCard = async (req, res) => {
       await createTransaction.save();
       await existingPayment.save();
 
-      console.log("3. here")
+      console.log("3. here");
       return res.status(400).json({
         code: 400,
         status: "failed",
         error: cardPayment?.msg,
       });
-
     } else {
       createTransaction = await TransactionsModel.create({
         paymentID,
@@ -216,11 +225,19 @@ const payWithCard = async (req, res) => {
   }
 };
 const getVirtualAccount = async (req, res) => {
-  let { amount, payment_id } = req.body;
+  let {email, amount, payment_id } = req.body;
   amount = Math.round(Number(amount));
-  const email = process.env.EMAIL;
-  const password = process.env.PASSWORD;
+  // const email = process.env.EMAIL;
+  // const password = process.env.PASSWORD;
   const bankUri = process.env.BANK_URI + "/api/v1";
+
+  if (!email) {
+    return res.status(400).json({
+      code: 400,
+      status: "failed",
+      error: "Email is required",
+    });
+  }
 
   if (!amount) {
     return res.status(400).json({
@@ -236,25 +253,49 @@ const getVirtualAccount = async (req, res) => {
       error: "Payment Id is required",
     });
   }
+  
   try {
     // login into bank
-    const response = await fetch(bankUri + "/auth/login", {
+    const response1 = await fetch(bankUri + "/auth/passwordless-login", {
       method: "post",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        email: email,
-        password: password,
+        email,
       }),
     });
-    const loginData = await response.json();
-    console.log("Login data from bank ", loginData);
-    if (!loginData?.token) {
+    
+    
+     const loginData = await response1.json();
+
+    if (!loginData?.otp) {
       return res.status(400).json({
         code: 400,
         status: "failed",
         error: "Error: Occured couldn't get into bank",
+      });
+    }
+
+    const verifyOtp = await fetch(bankUri + "/auth/verify-otp", {
+      method: "post",
+      headers: {
+        "Content-Type": "application/json"
+      }, 
+      body: JSON.stringify({
+        email,
+        otp: loginData?.otp
+      })
+    });
+
+    const otpVerifcation = await verifyOtp.json();
+  
+
+    if (!otpVerifcation?.token) {
+      return res.status(400).json({
+        code: 400,
+        status: "failed",
+        error: "Error occured, we couldn't get into bank",
       });
     }
     // generate account data
@@ -264,7 +305,7 @@ const getVirtualAccount = async (req, res) => {
         method: "post",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${loginData?.token}`,
+          Authorization: `Bearer ${otpVerifcation?.token}`,
         },
         body: JSON.stringify({ amount: amount, payment_id: payment_id }),
       },
@@ -345,8 +386,8 @@ const deletePaymentByPayID = async (req, res) => {
 };
 const getTransactionByPaymentIDFromBlinkpay = async (req, res) => {
   const { paymentId } = req.params;
-  const email = process.env.EMAIL;
-  const password = process.env.PASSWORD;
+  const { email } = req.query;
+  // const password = process.env.PASSWORD;
   const bankUri = process.env.BANK_URI + "/api/v1";
 
   if (!paymentId) {
@@ -364,54 +405,92 @@ const getTransactionByPaymentIDFromBlinkpay = async (req, res) => {
     });
   }
 
-  // login into bank
-  const response1 = await fetch(bankUri + "/auth/login", {
-    method: "post",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      email: email,
-      password: password,
-    }),
-  });
-  console.log({ email, password, bankUri });
-  const loginData = await response1.json();
-  console.log("Login data from bank ", loginData);
-
-  if (!loginData?.token) {
+  if (!email) {
     return res.status(400).json({
       code: 400,
       status: "failed",
-      error: "Error: Occured couldn't get into bank",
+      error: "Email is required",
     });
   }
 
-  const response = await fetch(
-    bankUri + "/account/transactions?payment_id=" + paymentId,
-    {
-      method: "get",
+  // login into bank
+  try {
+    const response1 = await fetch(bankUri + "/auth/passwordless-login", {
+      method: "post",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${loginData?.token}`,
       },
-    },
-  );
-  const data = await response.json();
-
-  if (!data || data.code === 404) {
-    return res.status(404).json({
-      code: 404,
-      status: "failed",
-      error: "No transactions found for this payment id" + paymentId,
+      body: JSON.stringify({
+        email,
+      }),
     });
-  }
 
-  return res.status(200).json({
-    code: 200,
-    status: "success",
-    transactions: data?.transactions,
-  });
+    const loginData = await response1.json();
+
+    if (!loginData?.otp) {
+      return res.status(400).json({
+        code: 400,
+        status: "failed",
+        error: "Error: Occured couldn't get into bank",
+      });
+    }
+
+    const verifyOtp = await fetch(bankUri + "/auth/verify-otp", {
+      method: "post",
+      headers: {
+        "Content-Type": "application/json"
+      }, 
+      body: JSON.stringify({
+        email,
+        otp: loginData?.otp
+      })
+    });
+
+    const otpVerifcation = await verifyOtp.json();
+  
+
+    if (!otpVerifcation?.token) {
+      return res.status(400).json({
+        code: 400,
+        status: "failed",
+        error: "Error occured, we couldn't get into bank",
+      });
+    }
+
+    const response = await fetch(
+      bankUri + "/account/transactions?payment_id=" + paymentId,
+      {
+        method: "get",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${otpVerifcation?.token}`,
+        },
+      },
+    );
+
+    const data = await response.json();
+
+    if (!data || data.code === 404) {
+      return res.status(404).json({
+        code: 404,
+        status: "failed",
+        error: "No transactions found for this payment id" + paymentId,
+      });
+    }
+
+    return res.status(200).json({
+      code: 200,
+      status: "success",
+      transactions: data?.transactions,
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({
+        code: 500,
+        status: "failed",
+        error: "Internal Server Error",
+      });
+  }
 };
 const updateTransaction = async (req, res) => {
   let { payment_id, status, amount } = req.query;
@@ -476,6 +555,59 @@ const updateTransaction = async (req, res) => {
     transaction,
   });
 };
+const generateQrCodePayment = async (req, res) => {
+  const { paymentId: payment_id } = req.params;
+  const { amount } = req.body;
+  if (!payment_id || !amount) {
+    return res.status(400).json({
+      code: 400,
+      error: "Payment ID and amount are required",
+    });
+  }
+  if (isNaN(amount)) {
+    return res.status(400).json({
+      code: 400,
+      error: "Invalid Amount - Amount must be an integer",
+    });
+  }
+  const url = process.env.BANK_URI + "/api/v1/account/generate-qrcode-payment";
+  try {
+    const payment = await Payment.findOne({ paymentId: payment_id });
+    if (!payment) {
+      return res.status(404).json({
+        code: 404,
+        error: "Payment not found",
+      });
+    }
+    if (payment.status === "failed" || payment.status === "successful") {
+      return res.status(400).json({
+        code: 400,
+        error:
+          "QR Code can't be generated because Payment is either Completed or Failed",
+      });
+    }
+    const user = await User.findById(payment.userId);
+
+    const response = await fetch(
+      `${url}?email=${user.blinkpay_account_email}&amount=${Number(amount)}&payId=${payment_id}`,
+      {
+        method: "Post",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      },
+    );
+    const data = await response.json();
+    return res.status(201).json({
+      code: 201,
+      msg: data.msg,
+      qrCode: data.qrCode,
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({ error: "Internal Server Error", code: 500 });
+  }
+};
 module.exports = {
   initiatePayment,
   getPaymentInfoByPayID,
@@ -485,4 +617,5 @@ module.exports = {
   deletePaymentByPayID,
   getTransactionByPaymentIDFromBlinkpay,
   updateTransaction,
+  generateQrCodePayment,
 };

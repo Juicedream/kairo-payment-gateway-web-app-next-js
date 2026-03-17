@@ -23,6 +23,10 @@ const paymentSchema = new mongoose.Schema({
         enum: ["successful", "pending", "failed"],
         default: "pending"
     },
+    blinkpay_email: {
+        type: String,
+        required: true,
+    },
     userId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
