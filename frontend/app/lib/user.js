@@ -49,3 +49,27 @@ export const apiKeyCreation = async (token) => {
   return data;
 }
 
+export const linkBlinkPayAccount = async (email) => {
+  const url = `${process.env.NEXT_PUBLIC_API_URL}/user/link-account?email=${email}`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+        "Content-Type": "application/json",
+    },
+  });
+  const data = await response.json();
+  console.log({data})
+  return data;
+}
+export const verifyOtpBlinkpayAccount = async (email, otp, userId) => {
+  const url = `${process.env.NEXT_PUBLIC_API_URL}/user/link-account?email=${email}&otp=${otp}&userId=${userId}`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+        "Content-Type": "application/json",
+    },
+  });
+  const data = await response.json();
+  return data;
+}
+

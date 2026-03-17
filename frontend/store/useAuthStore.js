@@ -15,10 +15,10 @@ const useAuthStore = create(
       },
 
       fetchProfile: async(token) => {
-        const currentToken = get().token;
+        const currentToken = token || get().token;
         if (!currentToken) return;
         try {
-            const response = await userProfile(token);
+            const response = await userProfile(currentToken);
             if (response?.error) {
               get().logout();
             }

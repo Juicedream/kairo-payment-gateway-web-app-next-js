@@ -34,7 +34,13 @@ const userSchema = new mongoose.Schema({
         type: String,
         enum: ['admin', 'customer'],
         default: "customer"
-    }
+    },
+    blinkpay_account_email: {
+        type: String,
+    },
+    blinkpay_account_number: {
+        type: Number,
+    },
 
 }, {timestamps: true});
 

@@ -1,5 +1,5 @@
 "use client";
-import { CreditCard } from "lucide-react";
+import { CreditCard, Scale3D } from "lucide-react";
 import formatDate from "../../utils/date";
 import TransactionDetails from "./TransactionDetails";
 import { useState } from "react";
@@ -47,6 +47,7 @@ export default function TransactionsTable({ transactions }) {
           </td>
           <td className="flex items-center gap-2">
             <span>{transaction?.paymentType === "card" && <CreditCard />}</span>
+            <span>{transaction?.paymentType === "transfer" && <Scale3D />}</span>
             <span>
               {transaction?.paymentType.charAt(0).toUpperCase() +
                 transaction?.paymentType.slice(1)}

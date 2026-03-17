@@ -1,6 +1,6 @@
 import { Calendar, CreditCard, Lock, RefreshCcw, User } from "lucide-react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { socketClientConnection } from "../../app/lib/socket";
 
@@ -12,6 +12,7 @@ function CardForm({ setLoading, setError, setSuccess, setErrorMessage, amount, i
   const paymentID = id || 0;
   const [cvv, setCvv] = useState("");
   const router = useRouter();
+  // const query = useSearchParams().get("email");
   const [data, setData] = useState({
     cardNumber,
     cvv,
@@ -108,14 +109,14 @@ function CardForm({ setLoading, setError, setSuccess, setErrorMessage, amount, i
       }
       async function payWithCard() {
         setLoading(true);
-        console.log({
-            cardNumber: cardNumber.split(" ").join(""), 
-            expiryDate: expDate, 
-            cvv, 
-            paymentID, 
-            amount
-          })
-        const response = await fetch("http://localhost:5000/api/v1/payments/pay-with-card", {
+        // console.log({
+        //     cardNumber: cardNumber.split(" ").join(""), 
+        //     expiryDate: expDate, 
+        //     cvv, 
+        //     paymentID, 
+        //     amount
+        //   })
+        const response = await fetch(`http://localhost:5000/api/v1/payments/pay-with-card`, {
           method: "post",
           headers: {
             "Content-Type": "application/json"
@@ -133,6 +134,7 @@ function CardForm({ setLoading, setError, setSuccess, setErrorMessage, amount, i
         if (data?.error) {
           setErrorMessage("Payment failed, " + data?.error || "try another card");
           setTimeout(() => setError(true), 3000);
+          setTimeout(() => router.back(), 4000);
           return;
         }
         
@@ -140,7 +142,6 @@ function CardForm({ setLoading, setError, setSuccess, setErrorMessage, amount, i
         socket.emit("pay-with-card", { paymentID, amount });
         setSuccess(true);
         setTimeout(() => router.back(), 4000);
-
       }
       payWithCard()
     } catch (error) {

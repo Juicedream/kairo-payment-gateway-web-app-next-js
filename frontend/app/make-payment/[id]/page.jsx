@@ -23,6 +23,7 @@ const websocket = new WebSocket(
 function MakePaymentPage() {
   const { id } = useParams();
   const router = useRouter();
+ 
 
   const [paymentInfo, setPaymentInfo] = useState({});
   const [virtualAccountInfo, setVirtualAccountInfo] = useState(null);
@@ -85,8 +86,8 @@ function MakePaymentPage() {
         "http://localhost:5000/api/v1/payments/info/" + payId,
       );
       const data = await res.json();
-      if (data?.status !== "pending") {
-        return data;
+      if (data.status === "failed") {
+        return "failed";
       }
       return data?.info;
     } catch (error) {
@@ -114,12 +115,12 @@ function MakePaymentPage() {
   useEffect(() => {
     async function setPaymentPage() {
       const response = await getPaymentInfo(id);
-      if (!response || response?.info.status !== "pending") {
+      if (response === "failed") {
         alert("Invalid or Expired Payment");
         router.back();
         return;
       }
-      setPaymentInfo(response?.info);
+      setPaymentInfo(response);
       setIsPageLoading(false);
     }
     setPaymentPage();

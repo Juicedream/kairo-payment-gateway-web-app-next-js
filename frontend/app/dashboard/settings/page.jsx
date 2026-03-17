@@ -4,39 +4,44 @@ import { useEffect, useState } from "react";
 import useAuthStore from "../../../store/useAuthStore";
 import { apiKeyCreation } from "../../lib/user";
 import { toast, ToastContainer } from "react-toastify";
+import { BlinkPayAccountModal } from "./BlinkPayAccountModal";
 
 export default function SettingsPage() {
   const [showKey, setShowKey] = useState(false);
   const [generating, setGenerating] = useState(false);
-  const {token, fetchProfile, user} = useAuthStore()
+  const { token, fetchProfile, user } = useAuthStore();
+
   const hasApiKey = user && user?.apiKey;
   async function handleGenerateApiKey() {
     setGenerating(true);
-    try{
-        const res = await apiKeyCreation(token);
-        if (res?.error) {
-            toast.error(res?.error);
-            throw Error(res?.error)
-        }
-        toast.success(res?.msg);
+    try {
+      const res = await apiKeyCreation(token);
+      if (res?.error) {
+        toast.error(res?.error);
+        throw Error(res?.error);
+      }
+      toast.success(res?.msg);
     } catch (error) {
-        console.log(error)
+      console.log(error);
     } finally {
-        setGenerating(false);
+      setGenerating(false);
     }
   }
   function handleCopyKey() {
     toast.success("Copied to clipboard");
     navigator.clipboard.writeText(user?.apiKey);
   }
+  function showModal() {
+    document.getElementById("my_modal_3").showModal();
+  }
 
   useEffect(() => {
-    fetchProfile(token)
-  }, [token, fetchProfile])
-  
+    fetchProfile(token);
+  }, [token, fetchProfile]);
+
   return (
     <div className="p-4 w-full">
-        <ToastContainer />
+      <ToastContainer />
       <h2 className="text-2xl font-bold">Settings Page</h2>
       <div className="w-full flex flex-col items-center bg-base text-white rounded-md py-5 mt-4">
         <div className="flex gap-4">
@@ -49,9 +54,11 @@ export default function SettingsPage() {
                 className="outline-none w-107.5"
                 disabled
               />
-              <button 
-              onClick={handleCopyKey}
-              className="btn btn-info" title="Copy Api Key">
+              <button
+                onClick={handleCopyKey}
+                className="btn btn-info"
+                title="Copy Api Key"
+              >
                 <Copy />
               </button>
               <button
@@ -66,10 +73,35 @@ export default function SettingsPage() {
               </button>
             </>
           ) : (
-            <button onClick={handleGenerateApiKey} disabled={generating} className="btn btn-soft btn-success text-white">{generating? <span className="loading loading-spin loading-lg"></span> :"Generate API Key"}</button>
+            <button
+              onClick={handleGenerateApiKey}
+              disabled={generating}
+              className="btn btn-soft btn-success text-white"
+            >
+              {generating ? (
+                <span className="loading loading-spin loading-lg"></span>
+              ) : (
+                "Generate API Key"
+              )}
+            </button>
+          )}
+        </div>
+
+        <div className="mt-8 text-center">
+          <h3>BlinkPay Account:</h3>
+          {user?.blinkpay_account_email && user?.blinkpay_account_number ? (
+            <p>Account linked successfully</p>
+          ) : (
+            <button
+              onClick={showModal}
+              className="btn btn-accent mt-4"
+            >
+              Link Account
+            </button>
           )}
         </div>
       </div>
+      {<BlinkPayAccountModal user={user} onFetchProfile={fetchProfile} token={token}/>}
     </div>
   );
 }

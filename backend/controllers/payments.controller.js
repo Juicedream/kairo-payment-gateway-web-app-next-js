@@ -14,13 +14,13 @@ const internalServerError = {
 
 const initiatePayment = async (req, res) => {
   let { email, amount } = req.body;
-  let {_id: userId} = req.user;
+  let { _id: userId } = req.user;
   email = String(email).trim();
   amount = Number(amount) + 0.52;
   if (!isValidObjectId(userId)) {
     return res
-       .status(400)
-       .json({code: 400, status: "failed", error: "Invalid userId"});
+      .status(400)
+      .json({ code: 400, status: "failed", error: "Invalid userId" });
   }
   if (!email || !amount) {
     return res
@@ -29,10 +29,17 @@ const initiatePayment = async (req, res) => {
   }
   const userExists = await UserModel.findById(userId);
 
+  
   if (!userExists) {
-     return res
-       .status(400)
-       .json({code: 400, status: "failed", error: "Invalid userId"});
+    return res
+    .status(400)
+    .json({ code: 400, status: "failed", error: "Invalid userId" });
+  }
+
+  if (!userExists?.blinkpay_account_email || !userExists?.blinkpay_account_email) {
+    return res
+      .status(400)
+      .json({ code: 400, status: "failed", error: "Error - You must have/create a blinkpay account to continue" });
   }
   try {
     const url = "http://localhost:3000/make-payment"; // this is a frontend link
@@ -48,8 +55,8 @@ const initiatePayment = async (req, res) => {
       email,
       amount,
       paymentId: paymentID,
-      paymentUrl: url + "/" + paymentID,
-      userId
+      paymentUrl: url + "/" + paymentID + "?email=" + userExists.blinkpay_account_email,
+      userId,
     });
 
     await newPayment.save();
@@ -68,7 +75,6 @@ const initiatePayment = async (req, res) => {
 
 const getPaymentInfoByPayID = async (req, res) => {
   const { payId } = req.params;
-
   try {
     if (!payId) {
       return res.status(400).json({
@@ -78,8 +84,8 @@ const getPaymentInfoByPayID = async (req, res) => {
       });
     }
 
-    const paymentInfo = await PaymentModel.find({ paymentId: payId });
-    if (paymentInfo.length === 0) {
+    const paymentInfo = await PaymentModel.findOne({ paymentId: payId });
+    if (!paymentInfo) {
       return res.status(404).json({
         code: 404,
         status: "failed",
@@ -89,7 +95,7 @@ const getPaymentInfoByPayID = async (req, res) => {
 
     return res
       .status(200)
-      .json({ code: 200, status: "success", info: paymentInfo[0] });
+      .json({ code: 200, status: "success", info: paymentInfo });
   } catch (error) {
     console.log("Error occurred getPaymentInfoByPayID controller ", error);
     return res.status(500).json(internalServerError);
@@ -97,13 +103,24 @@ const getPaymentInfoByPayID = async (req, res) => {
 };
 const payWithCard = async (req, res) => {
   const { cardNumber, expiryDate, cvv, paymentID, amount } = req.body;
+  const url = process.env.BANK_URI + "/api/v1/account/card-payment-external";
+
+  //   if (!email) {
+  //   return res.status(400).json({
+  //     code: 400,
+  //     status: "failed",
+  //     error: "Email is required",
+  //   });
+  // }
   if (!cardNumber || !expiryDate || !cvv || !paymentID || !amount) {
+    console.log("1. here")
     return res.status(400).json({
       code: 400,
       status: "failed",
       error: "All fields are required",
     });
   }
+
   try {
     // if (!isNaN(cardNumber)) {
     //   return res.status(400).json({
@@ -112,30 +129,87 @@ const payWithCard = async (req, res) => {
     //     error: "Card number must be an actual number"
     //   })
     // }
-    if (cardNumber !== "4242424242424242") {
+
+    // if (cardNumber !== "4242424242424242") {
+    //   return res.status(400).json({
+    //     code: 400,
+    //     status: "failed",
+    //     error: "Card number must be a demo number",
+    //   });
+    // }
+    let createTransaction;
+    let existingPayment = await PaymentModel.findOne({ paymentId: paymentID });
+    // FIND USER WITH EMAIL AND VERIFY THE PAYMENT ID
+    // if (!existingPayment) {
+    //   return res.status(404).json({
+    //      code: 404,
+    //     status: "failed",
+    //     error: "Payment not found",
+    //   })
+    // }
+    let user = await UserModel.findById(existingPayment?.userId);
+
+    if (!user) {
+      console.log("2. here")
+      return res.status(404).json({
+
+         code: 404,
+        status: "failed",
+        error: "Card Payment Failed - Receiver account not found",
+      })
+    }
+
+    const response = await fetch(`${url}?email=${user.blinkpay_account_email}`, {
+      method: "post",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        pan_number : cardNumber,
+        cvv,
+        expiry_date: expiryDate,
+        amount
+      })
+    });
+    const cardPayment = await response.json();
+    if (cardPayment.stack) {
+      createTransaction = await TransactionsModel.create({
+        paymentID,
+        paymentType: "card",
+        status: "failed",
+        amount: Number(amount),
+      });
+      createTransaction.userId = existingPayment.userId;
+      existingPayment.status = "failed";
+      await createTransaction.save();
+      await existingPayment.save();
+
+      console.log("3. here")
       return res.status(400).json({
         code: 400,
         status: "failed",
-        error: "Card number must be a demo number",
+        error: cardPayment?.msg,
+      });
+
+    } else {
+      createTransaction = await TransactionsModel.create({
+        paymentID,
+        paymentType: "card",
+        status: "successful",
+        amount: Number(amount),
+      });
+
+      createTransaction.userId = existingPayment.userId;
+      existingPayment.status = "successful";
+      await createTransaction.save();
+      await existingPayment.save();
+
+      return res.status(201).json({
+        code: "201",
+        status: "success",
+        transaction: createTransaction,
       });
     }
-    const createTransaction = await TransactionsModel.create({
-      paymentID,
-      paymentType: "card",
-      status: "successful",
-      amount: Number(amount),
-    });
-
-    let existingPayment = await PaymentModel.findOne({ paymentId: paymentID });
-    createTransaction.userId = existingPayment.userId;
-    existingPayment.status = "successful";
-    await createTransaction.save();
-    await existingPayment.save();
-    return res.status(201).json({
-      code: "201",
-      status: "success",
-      transaction: createTransaction,
-    });
   } catch (error) {
     console.error("Error occurred on payWithCard controller ", error);
     return res.status(500).json(internalServerError);
@@ -239,7 +313,7 @@ const getAllTransactions = async (_, res) => {
     return res.status(500).json(internalServerError);
   }
 };
-const deletePaymentByPayID = async(req, res) => {
+const deletePaymentByPayID = async (req, res) => {
   const { payId } = req.params;
   try {
     if (!payId) {
@@ -273,8 +347,8 @@ const getTransactionByPaymentIDFromBlinkpay = async (req, res) => {
   const { paymentId } = req.params;
   const email = process.env.EMAIL;
   const password = process.env.PASSWORD;
-  const bankUri = process.env.BANK_URI + "/api/v1"; 
-  
+  const bankUri = process.env.BANK_URI + "/api/v1";
+
   if (!paymentId) {
     return res.status(400).json({
       code: 400,
@@ -301,7 +375,7 @@ const getTransactionByPaymentIDFromBlinkpay = async (req, res) => {
       password: password,
     }),
   });
-  console.log({email, password, bankUri})
+  console.log({ email, password, bankUri });
   const loginData = await response1.json();
   console.log("Login data from bank ", loginData);
 
@@ -339,46 +413,46 @@ const getTransactionByPaymentIDFromBlinkpay = async (req, res) => {
     transactions: data?.transactions,
   });
 };
-const updateTransaction = async(req, res) => {
-  let {payment_id, status, amount} = req.query;
+const updateTransaction = async (req, res) => {
+  let { payment_id, status, amount } = req.query;
 
-  const existingPayment = await PaymentModel.findOne({ paymentId: payment_id});
+  const existingPayment = await PaymentModel.findOne({ paymentId: payment_id });
   if (!payment_id || !status || !amount) {
     return res.status(400).json({
-       code: 400,
+      code: 400,
       status: "failed",
-      error: "Payment ID, Amount and Status of payment is required!"
-    })
+      error: "Payment ID, Amount and Status of payment is required!",
+    });
   }
   if (!existingPayment) {
     return res.status(404).json({
       code: 404,
       status: "failed",
-      error: "Payment not found"
-    })
+      error: "Payment not found",
+    });
   }
 
   if (existingPayment.status !== "pending") {
     return res.status(400).json({
-       code: 400,
+      code: 400,
       status: "failed",
-      error: "You cannot update this payment as it has been settled"
-    })
+      error: "You cannot update this payment as it has been settled",
+    });
   }
 
   if (!["successful", "failed"].includes(status)) {
     return res.status(400).json({
-       code: 400,
+      code: 400,
       status: "failed",
-      error: "Status must either be successful or failed"
-    })
+      error: "Status must either be successful or failed",
+    });
   }
 
   if (isNaN(amount) || amount <= 0) {
-     return res.status(400).json({
-       code: 400,
+    return res.status(400).json({
+      code: 400,
       status: "failed",
-      error: "Amount must be an integer"
+      error: "Amount must be an integer",
     });
   }
 
@@ -387,22 +461,21 @@ const updateTransaction = async(req, res) => {
   existingPayment.status = status;
 
   const transaction = await TransactionsModel.create({
-     paymentID: payment_id,
-      paymentType: "transfer",
-      status,
-      amount: Number(amount),
-      userId: existingPayment.userId,
-  })
+    paymentID: payment_id,
+    paymentType: "transfer",
+    status,
+    amount: Number(amount),
+    userId: existingPayment.userId,
+  });
 
   await existingPayment.save();
 
   return res.status(201).json({
-      code: "201",
-      status: "success",
-      transaction,
-    });
-
-}
+    code: "201",
+    status: "success",
+    transaction,
+  });
+};
 module.exports = {
   initiatePayment,
   getPaymentInfoByPayID,
@@ -411,5 +484,5 @@ module.exports = {
   getAllTransactions,
   deletePaymentByPayID,
   getTransactionByPaymentIDFromBlinkpay,
-  updateTransaction
+  updateTransaction,
 };

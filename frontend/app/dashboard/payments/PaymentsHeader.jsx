@@ -1,5 +1,5 @@
 "use client";
-import { toast, ToastContainer } from "react-toastify";
+import { toast } from "react-toastify";
 import { InitiatePaymentModal } from "./InitiatePaymentModal";
 
 export default function PaymentsHeader({setPayments, user}) {
@@ -12,7 +12,6 @@ export default function PaymentsHeader({setPayments, user}) {
   }
   return (
     <div className="flex items-center justify-between">
-      <ToastContainer />
       <div>
         <h2 className="text-2xl font-bold">Payments Page</h2>
         <p className="text-sm text-gray-500">
