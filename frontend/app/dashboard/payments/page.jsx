@@ -30,7 +30,7 @@ export default function PaymentsPage() {
   async function fetchData() {
     try {
       const response = await getAllPayments(user?._id);
-      setPayments(response || []);
+      setPayments(response?.payments || response  || []);
     } catch (error) {
       console.error("Error fetching payments:", error);
     } finally {
